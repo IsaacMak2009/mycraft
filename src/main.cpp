@@ -12,6 +12,7 @@
 #include "includes/camera.h"
 #include "includes/texture.h"
 #include "includes/blocks.h"
+#include "config.h"
 
 typedef glm::vec<3, int> vec3_int;
 
@@ -45,7 +46,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow *window = glfwCreateWindow(1024, 768, "mycraft", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WINDOWS_WIDTH, WINDOWS_HEIGHT, "mycraft", NULL, NULL);
     glfwMakeContextCurrent(window);
 
     glfwSetKeyCallback(window, keyboard_callback);
@@ -61,8 +62,7 @@ int main() {
     mycraft::Shader shaderProg("shaders/vs/block.vsh", "shaders/fs/block.fsh");
 
     GLfloat vertices[180];
-    mycraft::blocks::generate_cube(vertices, mycraft::blocks::GRASS);
-    cout << vertices[4] << endl;
+    mycraft::blocks::generate_cube(vertices, mycraft::blocks::AIR);
     GLuint VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -81,31 +81,11 @@ int main() {
 
     glBindVertexArray(0); // Unbind VAO
 
-    GLfloat stone_vertices[180];
-    mycraft::blocks::generate_cube(stone_vertices, mycraft::blocks::COBBLESTONE);
-    GLuint VBO2, VAO2;
-    glGenVertexArrays(1, &VAO2);
-    glGenBuffers(1, &VBO2);
 
-    glBindVertexArray(VAO2);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(stone_vertices), stone_vertices, GL_STATIC_DRAW);
-
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    // TexCoord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-
-    glBindVertexArray(0); // Unbind VAO
-
-
-    mycraft::Texture texture("D:\\mycraft\\resources\\images\\block.png", GL_REPEAT, GL_NEAREST);
+    mycraft::Texture texture(TEXTURE_PATH, GL_REPEAT, GL_NEAREST);
     glm::mat4 projection(1.0f);
     glm::mat4 view(1.0f);
-    projection = glm::perspective(glm::radians(45.0f), 1024.0f / 768.0f, 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(FOV), 1024.0f / 768.0f, 0.1f, 100.0f);
 
     for (int i=0; i<10; i++) {
         for (int j=0; j<10; j++) {
@@ -118,6 +98,8 @@ int main() {
         int width, height;
         glfwGetWindowSize(window, &width, &height);
         glViewport(0, 0, width, height);
+
+        showFPS(window);
 
         glClearColor(0.57f, 0.73f, 0.85f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -135,27 +117,24 @@ int main() {
         glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "proj"), 1, GL_FALSE, glm::value_ptr(projection));
 
         // bind VAO
-        glBindVertexArray(VAO2);
-        {
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, debug_block);
-            glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-
         glBindVertexArray(VAO);
+
+        glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)mycraft::blocks::IMP_01);
+        glm::mat4 model(1.0f);
+        model = glm::translate(model, debug_block);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)mycraft::blocks::COBBLESTONE);
         for (vec3_int v : blocks) {
             glm::mat4 model(1.0f);
             model = glm::translate(model, glm::vec3(v));
             glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-        glBindVertexArray(0);
-
+        
         glBindVertexArray(0);
         
-        showFPS(window);
-
         do_movement();
 
         glfwSwapBuffers(window);
