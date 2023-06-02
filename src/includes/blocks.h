@@ -1,3 +1,5 @@
+#pragma once
+
 namespace mycraft::blocks {
     enum BLOCK {
         AIR,

@@ -12,10 +12,12 @@
 #include "includes/camera.h"
 #include "includes/texture.h"
 #include "includes/blocks.h"
+#include "includes/world.h"
 #include "config.h"
 
-typedef glm::vec<3, int> vec3_int;
+#define BLOCK_TP mycraft::blocks::BLOCK
 
+mycraft::world world(glm::ivec3(-100, -100, -100), glm::ivec3(100, 100, 100));
 mycraft::camera::Camera camera(glm::vec3(0.0f, 1.0f, 0.0f));
 GLfloat deltaTime = 0.025f;
 GLfloat lastTime = 0;
@@ -33,8 +35,6 @@ glm::float32 dotline(glm::vec3 p, glm::vec3 a, glm::vec3 b);
 
 bool firstMouse = true;
 bool keypressed[1024];
-
-std::vector<vec3_int> blocks;
 
 using std::cout;
 using std::endl;
@@ -89,7 +89,7 @@ int main() {
 
     for (int i=0; i<10; i++) {
         for (int j=0; j<10; j++) {
-            blocks.push_back(vec3_int(i-5, i+j, j-5));
+            world.setBlock(glm::ivec3(i, j, 0), BLOCK_TP::PLANKS);
         }
     }
 
@@ -119,18 +119,26 @@ int main() {
         // bind VAO
         glBindVertexArray(VAO);
 
-        glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)mycraft::blocks::IMP_01);
+        /*glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)mycraft::blocks::IMP_01);
         glm::mat4 model(1.0f);
         model = glm::translate(model, debug_block);
         glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, 36);*/
 
-        glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)mycraft::blocks::COBBLESTONE);
-        for (vec3_int v : blocks) {
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, glm::vec3(v));
-            glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (int dx = -RENDER_RADIUS/2; dx <= RENDER_RADIUS/2; dx++) {
+            for (int dy = -RENDER_RADIUS/2; dy <= RENDER_RADIUS/2; dy++) {
+                for (int dz = -RENDER_RADIUS/2; dz <= RENDER_RADIUS/2; dz++) {
+                    glm::ivec3 pos = glm::ivec3(dx, dy, dz) + glm::ivec3(camera.getPosition());
+                    if (world.getBlock(pos) == BLOCK_TP::AIR) {
+                        continue;
+                    }
+                    glUniform1f(glGetUniformLocation(shaderProg.program, "block"), (GLfloat)world.getBlock(pos));
+                    glm::mat4 model(1.0f);
+                    model = glm::translate(model, glm::vec3(pos));
+                    glUniformMatrix4fv(glGetUniformLocation(shaderProg.program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                    glDrawArrays(GL_TRIANGLES, 0, 36);
+                }
+            }
         }
         
         glBindVertexArray(0);
@@ -176,18 +184,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     lastX = xpos;
     lastY = ypos;
     camera.ProcessMouseMovement(xoffset, yoffset);
-    glm::float32 min_D = FLT_MAX;
-    int min_index = 0;
-    for (int i=0; i<blocks.size(); i++) {
-        float D = (dotline(blocks[i], camera.getPosition(), camera.Front) + 0.1) * glm::distance(glm::vec3(blocks[0]), camera.getPosition());
-        if (D < min_D) {
-            min_D = D;
-            min_index = i;
-        }
-    }
-    // get which face the block is pointing
-    debug_block = blocks[min_index];
-    //cout << debug_block.x << " " << debug_block.y << " " << debug_block.z << endl;
 }
 
 glm::float32 dotline(glm::vec3 p, glm::vec3 a, glm::vec3 b) {
@@ -198,7 +194,7 @@ glm::float32 dotline(glm::vec3 p, glm::vec3 a, glm::vec3 b) {
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    /*if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         // create a new block with pointing
         // find the nearest block
         glm::float32 min_D = FLT_MAX;
@@ -231,12 +227,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         }
         // create new block
         cout << min_index << " " << block.x << " " << block.y << " " << block.z << endl;
-        vec3_int new_block = faces[min_index] + faces[min_index] - glm::vec3(block);
+        glm::ivec3 new_block = faces[min_index] + faces[min_index] - glm::vec3(block);
         cout << new_block.x << " " << new_block.y << " " << new_block.z << endl;
         blocks.push_back(new_block);
         // cp.x + k*cf.x = X
         // k = (X - cp.x) / cf.x
-    }
+    }*/
+    return;
 }
 
 void showFPS(GLFWwindow *pWindow) {
